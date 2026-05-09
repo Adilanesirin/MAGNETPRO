@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "magnet-parents",
-    "slug": "magnet-parents",
+    "name": "MagnetPro",
+    "slug": "MagnetPro",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/magnet-appicon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
@@ -17,14 +17,21 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/magnet-appicon.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.adila2005.MagnetPro"
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "b45db2c5-3d22-4aec-a33d-7efde05d0b99"
+      }
+    },
+    "owner": "adila-2005"
   }
 }
