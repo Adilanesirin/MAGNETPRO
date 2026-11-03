@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -11,32 +11,59 @@ import {
   Image,
   ImageBackground,
   Platform,
+  Linking,
+    Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
+import { LinearGradient } from 'expo-linear-gradient';
 
-// ─── Brand Colors ─────────────────────────────────────────────────────────────
 const C = {
-  teal:        '#2ECC9A',
-  tealLight:   '#E6F9F3',
-  tealMid:     '#A8E9D5',
-  blue:        '#1E9FD8',
-  blueLight:   '#E6F4FB',
-  dark:        '#1A2332',
-  body:        '#4A5568',
-  muted:       '#8A97A8',
-  border:      '#DDE6EF',
-  borderFocus: '#2ECC9A',
-  bg:          '#F7FBFE',
-  white:       '#FFFFFF',
-  error:       '#E5534B',
-  errorLight:  '#FEF2F2',
-  badge:       '#FFF8E7',
-  badgeDot:    '#F4A622',
+  // CHANGED — re-mapped to the same teal-cyan family used across
+  // HomeScreen/DiaryScreen (accent #0E7EA4), so this screen reads as the
+  // same app instead of a different brand. Only values changed — every key
+  // name is untouched, so no other line in this file needs to change.
+  teal:        '#0E7EA4',   // was mint green — now the shared brand accent
+  tealLight:   '#EDF6FA',   // matches HomeScreen's accentLight
+  tealMid:     '#9CC9DA',   // lighter tint of the accent, for filled-field borders
+  blue:        '#1591B8',   // matches HomeScreen's card2, keeps illustration accents in-family
+  blueLight:   '#F2F8FA',   // matches HomeScreen's statBg
+  dark:        '#1A2B35',   // matches HomeScreen's dark
+  body:        '#3B5866',   // a supporting mid-tone in the same hue, was a plain slate gray
+  muted:       '#7AA0B0',   // matches HomeScreen's muted
+  border:      '#DCEAF0',   // was neutral gray — now a faint teal-tinted border, matching Home's border hue
+  borderFocus: '#0E7EA4',
+  bg:          '#F2F5F7',   // matches HomeScreen's bg
+  white:       '#ffffff',
+  error:       '#E5534B',   // unchanged — red is a semantic color, not brand, fine to keep as-is
+  errorLight:  '#FEF2F2',   // unchanged, same reasoning
+  badge:       '#FEF3EC',   // matches HomeScreen's amberBg
+  badgeDot:    '#C97A3A',   // matches HomeScreen's amber
 };
 
-// ─── Icons ────────────────────────────────────────────────────────────────────
+const MailFooterIcon = () => (
+  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+    <Rect x="3" y="5" width="18" height="14" rx="2" stroke={C.white} strokeWidth="1.6" />
+    <Path d="M3 6.5l9 6.5 9-6.5" stroke={C.white} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
+const GlobeFooterIcon = () => (
+  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+    <Circle cx="12" cy="12" r="9" stroke={C.white} strokeWidth="1.6" />
+    <Path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18" stroke={C.white} strokeWidth="1.4" />
+  </Svg>
+);
+
+const InstagramFooterIcon = () => (
+  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+    <Rect x="3.5" y="3.5" width="17" height="17" rx="5" stroke={C.white} strokeWidth="1.6" />
+    <Circle cx="12" cy="12" r="4" stroke={C.white} strokeWidth="1.6" />
+    <Circle cx="17.2" cy="6.8" r="1" fill={C.white} />
+  </Svg>
+);
 const SchoolIcon = () => (
   <Svg width={17} height={70} viewBox="0 0 24 24" fill="none">
     <Path d="M3 21V9l9-6 9 6v12" stroke={C.muted} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
@@ -110,14 +137,15 @@ const SchoolIllustration = () => (
 // ─── Screen ───────────────────────────────────────────────────────────────────
 export const LoginScreen = ({ navigation }: any) => {
    useEffect(() => {
-    AsyncStorage.multiGet(['token', 'studentName']).then(pairs => {
-      const token = pairs[0][1];
-      const studentName = pairs[1][1];
-      if (token && studentName) {
-        navigation.replace('Home', { token, studentName });
-      }
-    });
-  }, []);
+  AsyncStorage.multiGet(['token', 'studentName', 'mobileAppFeatures']).then(pairs => {
+    const token = pairs[0][1];
+    const studentName = pairs[1][1];
+    const features = pairs[2][1] ? JSON.parse(pairs[2][1]) : [];
+    if (token && studentName) {
+      navigation.replace('Home', { token, studentName, features });
+    }
+  });
+}, []);
   const [institutionId, setInstitutionId] = useState('');
   const [admno, setAdmno]                 = useState('');
   const [password, setPassword]           = useState('');
@@ -125,6 +153,9 @@ export const LoginScreen = ({ navigation }: any) => {
   const [loading, setLoading]             = useState(false);
   const [error, setError]                 = useState('');
   const [focusedField, setFocusedField]   = useState<string | null>(null);
+   const btnScale = useRef(new Animated.Value(1)).current;
+  const pressIn  = () => Animated.spring(btnScale, { toValue: 0.96, useNativeDriver: true, speed: 40, bounciness: 0 }).start();
+  const pressOut = () => Animated.spring(btnScale, { toValue: 1, useNativeDriver: true, speed: 18, bounciness: 9 }).start();
 
   const handleLogin = async () => {
     if (!institutionId.trim() || !admno.trim() || !password.trim()) {
@@ -137,28 +168,37 @@ export const LoginScreen = ({ navigation }: any) => {
       const response = await fetch('https://magnetpro.in/api/parent-login/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          institution_id: institutionId.trim(),
-          admno: admno.trim(),
-          password,
-        }),
+       body: JSON.stringify({
+        institution_id: institutionId.trim(),
+        admno: admno.trim(),
+        password: password.trim(),
+      }),
       });
-      const data = await response.json();
-      console.log('Login response:', data); // remove after debugging
-        if (response.ok) {
-          await AsyncStorage.multiSet([
-            ['token', data.access],
-            ['studentName', data.student_name],
-          ]);
-          navigation.replace('Home', {
-            token: data.access,
-            studentName: data.student_name,
-          });
-        }
-        else {
-          setError(data?.detail || data?.message || 'Incorrect credentials. Please try again.');
-        }
-    } catch {
+     const data = await response.json();
+console.log('Login response full payload:', JSON.stringify(data, null, 2)); // TODO: remove after confirming field names
+
+if (response.ok) {
+  // ── License / user control check ──
+  if (!data.license?.valid || data.license?.is_expired) {
+    setError(data.license?.message || 'License is not active. Please contact your institution.');
+    return;
+  }
+
+  await AsyncStorage.multiSet([
+    ['token', data.access],
+    ['refreshToken', data.refresh],
+    ['studentName', data.student_name?.trim() ?? ''],
+    ['institutionId', institutionId.trim()],
+    ['mobileAppFeatures', JSON.stringify(data.mobile_app_features ?? [])],
+  ]);
+  navigation.replace('Home', {
+    token: data.access,
+    studentName: data.student_name?.trim(),
+    features: data.mobile_app_features ?? [],
+  });
+} else {
+  setError(data?.detail || data?.message || 'Incorrect credentials. Please try again.');
+}    } catch {
       setError('Network error. Please check your connection and try again.');
     } finally {
       setLoading(false);
@@ -199,7 +239,12 @@ export const LoginScreen = ({ navigation }: any) => {
               />
 
               {/* Divider */}
-              <View style={s.divider} />
+              <LinearGradient
+                colors={['transparent', C.border, 'transparent']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={s.divider}
+              />
 
               {/* Error */}
               {!!error && (
@@ -221,6 +266,7 @@ export const LoginScreen = ({ navigation }: any) => {
                   autoCapitalize="characters"
                   onFocus={() => setFocusedField('inst')}
                   onBlur={() => setFocusedField(null)}
+                  editable={!loading}
                 />
               </View>
 
@@ -237,6 +283,7 @@ export const LoginScreen = ({ navigation }: any) => {
                   autoCapitalize="characters"
                   onFocus={() => setFocusedField('adm')}
                   onBlur={() => setFocusedField(null)}
+                  editable={!loading}
                 />
               </View>
 
@@ -251,33 +298,68 @@ export const LoginScreen = ({ navigation }: any) => {
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPass}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete="off"
+                  textContentType="password"
                   onFocus={() => setFocusedField('pass')}
                   onBlur={() => setFocusedField(null)}
+                  editable={!loading}
                 />
                 <TouchableOpacity
                   onPress={() => setShowPass(v => !v)}
+                  disabled={loading}
                   hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                 >
                   <EyeIcon off={showPass} />
                 </TouchableOpacity>
               </View>
 
-              {/* Sign In Button */}
-              <TouchableOpacity
-                style={[s.btn, loading && s.btnDisabled]}
-                onPress={handleLogin}
-                activeOpacity={0.85}
-                disabled={loading}
-              >
-                {loading
-                  ? <ActivityIndicator color={C.white} size="small" />
-                  : <Text style={s.btnText}>Sign In</Text>
-                }
-              </TouchableOpacity>
+            
+          
+            <Animated.View style={{ transform: [{ scale: btnScale }] }}>
+                <TouchableOpacity
+                  onPress={handleLogin}
+                  onPressIn={pressIn}
+                  onPressOut={pressOut}
+                  activeOpacity={0.85}
+                  disabled={loading}
+                >
+                  <LinearGradient
+                    colors={[C.teal, '#0A5F7A']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={[s.btn, loading && s.btnDisabled]}
+                  >
+                    {loading
+                      ? <ActivityIndicator color={C.white} size="small" />
+                      : <Text style={s.btnText}>Sign In</Text>
+                    }
+                  </LinearGradient>
+                </TouchableOpacity>
+              </Animated.View>
 
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
+
+       <View style={s.footerWrap}>
+          <View style={s.socialRow}>
+            <TouchableOpacity style={s.socialBtn} onPress={() => Linking.openURL('https://imcbs.com/')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <GlobeFooterIcon />
+            </TouchableOpacity>
+            <TouchableOpacity style={s.socialBtn} onPress={() => Linking.openURL('mailto:info@imcbs.com')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <MailFooterIcon />
+            </TouchableOpacity>
+            <TouchableOpacity style={s.socialBtn} onPress={() => Linking.openURL('https://instagram.com/imcbusinesssolutions')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <InstagramFooterIcon />
+            </TouchableOpacity>
+          </View>
+          <Text style={s.footer}>
+            Powered by <Text style={s.footerBrand}>IMCB Solutions</Text>
+          </Text>
+          <Text style={s.footerVersion}>v{Constants.expoConfig?.version}</Text>
+        </View>
       </SafeAreaView>
     </ImageBackground>
   );
@@ -298,32 +380,78 @@ const s = StyleSheet.create({
   },
   scroll: {
     flexGrow: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
     paddingHorizontal: 24,
     paddingVertical: 40,
   },
 
   // ── Single card ──
   card: {
-    backgroundColor: "#ffffffc8",
+    backgroundColor: "#f0f3f3ca",
     borderRadius: 20,
     paddingHorizontal: 24,
     paddingTop: 32,
     paddingBottom: 28,
+     shadowColor: '#0A2530',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
+    elevation: 10,
+  },
+// NEW — wraps both footer lines; marginTop moved here since footer
+  // itself is now just the first line, not the whole block
+footerWrap: {
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+  },
+  footer: {
+    textAlign: 'center',
+    fontSize: 12,
+    color: '#575c5ccc',
+    fontWeight: '600',
+    letterSpacing: 0.3,
+  },
+  footerBrand: {
+    fontWeight: '700',
+    color: C.teal,
+  },
+  // NEW — version sits on its own line below, smaller and quieter than the
+  // brand line since it's the least important piece of info here
+  footerVersion: {
+    textAlign: 'center',
+    fontSize: 12.5,
+    color: '#575c5ccc',
+    fontWeight: '500',
+    marginTop: 2,
+  },
+ socialRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 16,
+    marginTop: 12,
+    marginBottom: 10,
+  },
+socialBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: C.teal,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
  logo: {
-  width: '60%',       // relative to card width, never stretches it
-  maxWidth: 150,
+  width: '75%',       // relative to card width, never stretches it
+  maxWidth: 190,
   height: 148,
   alignSelf: 'center',
   marginBottom: 24,
   marginTop: -50,   // pulls the logo up to overlap the card's top edge for a dynamic look
 },
 
-  divider: {
+divider: {
     height: 1,
-    backgroundColor: C.border,
     marginBottom: 24,
     marginTop: -50,
   },
@@ -372,8 +500,7 @@ field: {
   },
 
   // Button
-  btn: {
-    backgroundColor: C.teal,
+btn: {
     borderRadius: 10,
     height: 50,
     alignItems: 'center',

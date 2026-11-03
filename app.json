@@ -2,36 +2,51 @@
   "expo": {
     "name": "MagnetPro",
     "slug": "MagnetPro",
-    "version": "1.0.0",
+    "version": "3.3.5",
     "orientation": "portrait",
     "icon": "./assets/magnet-appicon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
     "ios": {
-      "supportsTablet": true
+      "buildNumber": "3.3.5",
+      "supportsTablet": true,
+      "bundleIdentifier": "com.magnet.MagnetPro",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSMicrophoneUsageDescription": "MagnetPro uses the microphone so Study Buddy can hear your spoken answers during live English speaking practice."
+      }
     },
     "android": {
+      "versionCode": 10,
       "adaptiveIcon": {
         "foregroundImage": "./assets/magnet-appicon.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.adila2005.MagnetPro"
+      "package": "com.magnet.MagnetPro"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "extra": {
       "eas": {
-        "projectId": "b45db2c5-3d22-4aec-a33d-7efde05d0b99"
+        "projectId": "6f542465-14a3-49ac-bd6c-a78214f6e6ad"
       }
     },
-    "owner": "adila-2005"
+    "owner": "magnetpro_emp",
+    "plugins": [
+      "expo-asset",
+      [
+       "expo-audio",
+        {
+          "microphonePermission": "MagnetPro uses the microphone so Study Buddy can hear your spoken answers during live English speaking practice."
+        }
+      ],
+      "expo-web-browser",
+      "./plugins/withNoSplashScreen",
+      "expo-sharing",
+      "expo-status-bar"
+    ]
   }
 }
